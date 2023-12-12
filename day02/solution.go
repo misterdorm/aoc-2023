@@ -15,9 +15,11 @@
 // they are not necessarily in any particular order.
 //
 // This code needs to determine which games are possible, given that we know
-// the bag contains only 12 red cubes, 13 green cubes, and 14 blue cubes.  The
-// final output of the program should be the sum of the game IDs of all the
-// possible games
+// the bag contains only 12 red cubes, 13 green cubes, and 14 blue cubes.  For
+// each game that is possible, then determine the minimum number of cubes of
+// each color that must be in the bag for that game to be possible.  The final
+// output should be a sum of the powers of the minimal number of each color
+// cube for each possible game.
 
 // Start with defining a struct to hold the game results and writing a function to
 // parse the results of a single game (a single line from the input file), including
@@ -140,9 +142,9 @@ func main() {
 		possible := isPossible(gameResult)
 		fmt.Printf("Game %d: %t\n", gameResult.GameID, possible)
 
-		if possible { // Increment gameSum if game is possible
-			gameSum += gameResult.GameID
-		}
+		minimumCubes := determineMinimumCubes(gameResult)
+		powerOfMinimumCubes := minimumCubes.Red * minimumCubes.Green * minimumCubes.Blue
+		gameSum += powerOfMinimumCubes
 	}
 
 	if err := scanner.Err(); err != nil {
@@ -150,7 +152,7 @@ func main() {
 		return
 	}
 
-	fmt.Println("Sum of possible game IDs:", gameSum) // Print the sum of possible game IDs
+	fmt.Println("Sum of powers of minimum cubes:", gameSum)
 }
 
 // Write a function to determine if a game is possible or not.  The function
@@ -172,4 +174,28 @@ func isPossible(gameResult GameResult) bool {
 	}
 
 	return true
+}
+
+func determineMinimumCubes(gameResult GameResult) Results {
+	minimumCubes := Results{
+		Red:   0,
+		Green: 0,
+		Blue:  0,
+	}
+
+	for _, result := range gameResult.Results {
+		if result.Red > minimumCubes.Red {
+			minimumCubes.Red = result.Red
+		}
+		if result.Green > minimumCubes.Green {
+			minimumCubes.Green = result.Green
+		}
+		if result.Blue > minimumCubes.Blue {
+			minimumCubes.Blue = result.Blue
+		}
+	}
+
+	fmt.Println("Minimum Cubes:", minimumCubes) // Print minimumCubes for debugging/verbose purposes
+
+	return minimumCubes
 }
