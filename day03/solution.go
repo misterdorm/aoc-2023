@@ -31,6 +31,7 @@ import (
 
 var checkedLocations map[int]bool
 var width int
+var ratioSum int
 
 func main() {
 	// Open the file specified on the command line
@@ -51,6 +52,7 @@ func main() {
 
 	// Initialize the checkedLocations map
 	checkedLocations = make(map[int]bool)
+	ratioSum = 0
 
 	// Read one line from the file at a time
 	lineCount := 0
@@ -119,6 +121,7 @@ func main() {
 		log.Fatal(err)
 	}
 	println("Sum of part numbers:", sum)
+	println("Sum of gear ratios:", ratioSum)
 }
 
 // Find part numbers on the current line, based on context from the previous and
@@ -130,7 +133,8 @@ func main() {
 // to a symbol if any digit character of the part number is adjacent to the symbol.
 // Return an array of part numbers found on the current line.
 func FindPartNumbers(lines [3]string, lineNum int) []string {
-	var partNumbers []string
+	var allPartNumbers []string
+	var oneSymPartNumbers []string
 
 	println("-------------")
 	println("Line 0:", lines[0])
@@ -142,6 +146,9 @@ func FindPartNumbers(lines [3]string, lineNum int) []string {
 		if !isNumber(byte(char)) && char != '.' {
 			println("Symbol at ", c, ":", string(char))
 
+			// reset oneSymPartNumbers array to empty
+			oneSymPartNumbers = nil
+
 			// Look for adjacent (horizontally) numbers on the "current" (middle) line
 			// On either side of the symbol in the line string, look for numbers
 			// that are adjacent to it in the string. The number could be one or
@@ -149,33 +156,53 @@ func FindPartNumbers(lines [3]string, lineNum int) []string {
 			// part numbers.
 			if c > 0 {
 				nums := FindNumbersAt(lines[1], c-1, lineNum)
-				// Merge the array returned by FindNumbersAt() into the partNumbers array
-				partNumbers = append(partNumbers, nums...)
+				// Merge the array returned by FindNumbersAt() into the oneSymPartNumbers array
+				oneSymPartNumbers = append(oneSymPartNumbers, nums...)
 			}
 			if c < len(lines[1])-1 {
 				nums := FindNumbersAt(lines[1], c+1, lineNum)
-				// Merge the array returned by FindNumbersAt() into the partNumbers array
-				partNumbers = append(partNumbers, nums...)
+				// Merge the array returned by FindNumbersAt() into the oneSymPartNumbers array
+				oneSymPartNumbers = append(oneSymPartNumbers, nums...)
 			}
 
 			// Look for adjacent (vertically and diagonally) numbers on the previous and next lines
 			for c1 := c - 1; c1 <= c+1; c1++ {
 				if c1 >= 0 && c1 < len(lines[1]) {
 					nums := FindNumbersAt(lines[0], c1, lineNum-1)
-					// Merge the array returned by FindNumbersAt() into the partNumbers array
-					partNumbers = append(partNumbers, nums...)
+					// Merge the array returned by FindNumbersAt() into the oneSymPartNumbers array
+					oneSymPartNumbers = append(oneSymPartNumbers, nums...)
 
 					nums = FindNumbersAt(lines[2], c1, lineNum+1)
-					// Merge the array returned by FindNumbersAt() into the partNumbers array
-					partNumbers = append(partNumbers, nums...)
+					// Merge the array returned by FindNumbersAt() into the oneSymPartNumbers array
+					oneSymPartNumbers = append(oneSymPartNumbers, nums...)
 				}
 			}
 
 			println("")
 		}
+
+		// If the symbol character `char` is an asterisk (*), and the number of elements in the
+		// oneSymPartNumbers array is exactly 2, then multiply the two numbers together and
+		// add that to a sum variable
+		if char == '*' && len(oneSymPartNumbers) == 2 {
+			println("Found gear symbol!")
+			num1, err := strconv.Atoi(oneSymPartNumbers[0])
+			if err != nil {
+				log.Fatal(err)
+			}
+			num2, err := strconv.Atoi(oneSymPartNumbers[1])
+			if err != nil {
+				log.Fatal(err)
+			}
+			product := num1 * num2
+			ratioSum += product
+			println("Found gear symbol! ", num1, " * ", num2, " = ", product, " new sum: ", ratioSum)
+		}
+
+		allPartNumbers = append(allPartNumbers, oneSymPartNumbers...)
 	}
 
-	return partNumbers
+	return oneSymPartNumbers
 }
 
 // isNumber checks if a character is a digit.
