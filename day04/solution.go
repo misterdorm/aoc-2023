@@ -3,8 +3,13 @@
 // followed by a colon, followed a space-separated list of numbers, followed
 // by a pipe charater ("|"), followed by another space-separated list of numbers.
 // Determine how many of the numbers from the first list is contained in the
-// second list.  Print out the card number and the count of numbers that were
-// found.
+// second list.
+//
+// The number of matches on each line determines how many additional copies of
+// the following cards we'll get.  For example, if Cart 1 has 4 matches, then we
+// get one copy each of the following four cards (Card 2, Card 3, Card 4, and Card 5).
+// Each card, and copies of cards, are processed in order until we reach a card
+// that grants no additional copies.  Determine the total number of cards.
 
 // Sample input file:
 // Card 1: 41 48 83 86 17 | 83 86  6 31 17  9 48 53
@@ -31,8 +36,9 @@ package main
 import (
 	"bufio"
 	"fmt"
-	"math"
 	"os"
+	"sort"
+	"strconv"
 	"strings"
 )
 
@@ -49,7 +55,8 @@ func main() {
 		os.Exit(1)
 	}
 
-	sumPoints := 0
+	// Map for tracking how many copies of each card we have
+	cards := make(map[int]int)
 
 	// Read the file one line at a time
 	scanner := bufio.NewScanner(f)
@@ -62,24 +69,61 @@ func main() {
 		// as arguments and returns the count of numbers found in the second list.
 		count := countMatches(list1, list2)
 
-		// Print out the card number and the count of numbers found.
-		points := int(math.Pow(2, float64(count-1)))
-		sumPoints += points
-		fmt.Printf("%s: %d = %d points (total %d)\n", card, count, points, sumPoints)
+		println("======================")
+		fmt.Printf("Card %d: Matches: %d\n", card, count)
+
+		// Increment the count for this card (we start at i = 0), and additional
+		// copies of following cards -- all of that for each copy of this card.
+		cardCount := cards[card]
+		cards[card]++
+
+		for j := 0; j <= cardCount; j++ {
+			for i := 1; i <= count; i++ {
+				cards[card+i]++
+			}
+		}
+
+		// Print the contents of the `cards` map
+		keys := make([]int, 0, len(cards))
+		for key := range cards {
+			keys = append(keys, key)
+		}
+		sort.Ints(keys)
+
+		for _, card := range keys {
+			count := cards[card]
+			fmt.Printf("%d: %d\n", card, count)
+		}
+		println()
 	}
+
+	total := 0
+	for _, value := range cards {
+		total += value
+	}
+
+	// Print the total number of cards
+	fmt.Printf("Total: %d\n", total)
 
 	f.Close()
 }
 
 // Parse a line of input into the card number, and the two lists of numbers.
 // Return the card number and the two lists of numbers.
-func parseLine(line string) (string, []string, []string) {
+func parseLine(line string) (int, []string, []string) {
 	// Split the line into three parts, using the colon and the pipe characters
 	parts := strings.Split(line, ":")
-	card := parts[0]
+	cardStr := strings.TrimLeft(parts[0], "Card ")
 	parts = strings.Split(parts[1], "|")
 	list1 := strings.Fields(parts[0])
 	list2 := strings.Fields(parts[1])
+
+	// Convert card to an integer
+	card, err := strconv.Atoi(cardStr)
+	if err != nil {
+		fmt.Println("Error converting card to integer:", err)
+	}
+
 	return card, list1, list2
 }
 
