@@ -82,6 +82,10 @@
 
 // What is the lowest location number that corresponds to any of the initial seed numbers?
 
+// Update: The values on the initial seeds: line come in pairs. Within each pair, the first value is the start of the range and the second value is the length of the range. So, in the first line of the example above:
+// seeds: 79 14 55 13
+// This line describes two ranges of seed numbers to be planted in the garden. The first range starts with seed number 79 and contains 14 values: 79, 80, ..., 91, 92. The second range starts with seed number 55 and contains 13 values: 55, 56, ..., 66, 67.
+
 package main
 
 import (
@@ -126,9 +130,9 @@ func main() {
 	scanner := bufio.NewScanner(file)
 
 	// Read the first line of seed numbers
-	seedNumbers := readSeedNumbers(scanner)
+	seedRanges := readSeedRanges(scanner)
 
-	fmt.Printf("%v\n", seedNumbers)
+	fmt.Printf("%v\n", seedRanges)
 
 	// Read the conversion maps
 	conversionMaps := readConversionMaps(scanner)
@@ -143,66 +147,60 @@ func main() {
 	fmt.Printf("%v\n", conversionMaps.HumidityToLocationMap)
 
 	// Calculate the lowest location number
-	lowestLocationNumber := calculateLowestLocationNumber(seedNumbers, conversionMaps)
+	lowestLocationNumber := calculateLowestLocationNumber(seedRanges, conversionMaps)
 
 	// Print the lowest location number
 	fmt.Println(lowestLocationNumber)
 
 }
 
-// Function that takes a number (source) and an array of ConversionMap structs,
-// checking convertNumber for each conversion map, returning the resulting
-// destination number if the source number is found in the conversion map.
-// If the source number is not found in any conversion map, the function
-// returns the source number.
+func convertNumberArray(source [][]int, conversionMaps []ConversionMap) [][]int {
+	var result [][]int
 
-func convertNumberArray(source int, conversionMaps []ConversionMap) int {
-	// Loop through the conversion maps
-	for _, conversionMap := range conversionMaps {
-		// Check the conversion map for the source number
-		destination := convertNumber(source, conversionMap.SourceRangeStart, conversionMap.DestinationRangeStart, conversionMap.RangeLength)
+	// Loop through each source range
+	for _, sourceRange := range source {
+		// Loop through the conversion maps
+		for _, conversionMap := range conversionMaps {
+			// Check if the source range overlaps with the conversion map's source range
+			if sourceRange[1] >= conversionMap.SourceRangeStart && sourceRange[0] <= conversionMap.SourceRangeStart+conversionMap.RangeLength-1 {
+				// Calculate the destination range start and end
+				destinationRangeStart := conversionMap.DestinationRangeStart + (sourceRange[0] - conversionMap.SourceRangeStart)
+				destinationRangeEnd := destinationRangeStart + (sourceRange[1] - sourceRange[0])
 
-		// If the source number is found in the conversion map, return the destination number
-		if destination != source {
-			return destination
+				// Append the destination range to the result
+				result = append(result, []int{destinationRangeStart, destinationRangeEnd})
+			}
 		}
 	}
 
-	// If the source number is not found in any conversion map, return the source number
-	return source
+	return result
 }
 
 // Function that takes an array of seed numbers and a ConversionMaps struct,
 // and returns the lowest location number that corresponds to any of the seed numbers.
 
-func calculateLowestLocationNumber(seedNumbers []int, conversionMaps *ConversionMaps) int {
-	// Create an empty array of integers
-	var locationNumbers []int
+func calculateLowestLocationNumber(seedRanges [][]int, conversionMaps *ConversionMaps) int {
 
-	// Loop through the seed numbers
-	for _, seedNumber := range seedNumbers {
-		// Convert the seed number to a location number
-		locationNumber := convertNumberArray(seedNumber, conversionMaps.SeedToSoilMap)
-		locationNumber = convertNumberArray(locationNumber, conversionMaps.SoilToFertilizerMap)
-		locationNumber = convertNumberArray(locationNumber, conversionMaps.FertilizerToWaterMap)
-		locationNumber = convertNumberArray(locationNumber, conversionMaps.WaterToLightMap)
-		locationNumber = convertNumberArray(locationNumber, conversionMaps.LightToTemperatureMap)
-		locationNumber = convertNumberArray(locationNumber, conversionMaps.TemperatureToHumidity)
-		locationNumber = convertNumberArray(locationNumber, conversionMaps.HumidityToLocationMap)
-
-		// Add the location number to the array of location numbers
-		locationNumbers = append(locationNumbers, locationNumber)
-	}
+	// Convert the seed number to a location number
+	locationRanges := convertNumberArray(seedRanges, conversionMaps.SeedToSoilMap)
+	locationRanges = convertNumberArray(locationRanges, conversionMaps.SoilToFertilizerMap)
+	locationRanges = convertNumberArray(locationRanges, conversionMaps.FertilizerToWaterMap)
+	locationRanges = convertNumberArray(locationRanges, conversionMaps.WaterToLightMap)
+	locationRanges = convertNumberArray(locationRanges, conversionMaps.LightToTemperatureMap)
+	locationRanges = convertNumberArray(locationRanges, conversionMaps.TemperatureToHumidity)
+	locationRanges = convertNumberArray(locationRanges, conversionMaps.HumidityToLocationMap)
 
 	// Find the lowest location number
-	lowestLocationNumber := locationNumbers[0]
-	for _, locationNumber := range locationNumbers {
-		if locationNumber < lowestLocationNumber {
-			lowestLocationNumber = locationNumber
-		}
-	}
+	// TODO: refactor
+	// lowestLocationNumber := locationRanges[0]
+	// for _, locationRange := range locationRanges {
+	// 	if locationRange < lowestLocationNumber {
+	// 		lowestLocationNumber = locationRange
+	// 	}
+	// }
 
 	// Return the lowest location number
+	lowestLocationNumber := 0
 	return lowestLocationNumber
 }
 
@@ -230,9 +228,9 @@ func convertNumber(source int, sourceRangeStart int, destinationRangeStart int, 
 // The line format looks like this:
 // seeds: 79 14 55 13
 
-func readSeedNumbers(scanner *bufio.Scanner) []int {
-	// Create an empty array of integers
-	var seedNumbers []int
+func readSeedRanges(scanner *bufio.Scanner) [][]int {
+	// Create an empty array of int arrays
+	var seedRanges [][]int
 
 	// Read the first line of the file
 	scanner.Scan()
@@ -242,15 +240,19 @@ func readSeedNumbers(scanner *bufio.Scanner) []int {
 	words := strings.Split(line, " ")
 
 	// Loop through the words
-	for _, word := range words {
-		// If the word is a number, convert it to an integer and add it to the array
-		if number, err := strconv.Atoi(word); err == nil {
-			seedNumbers = append(seedNumbers, number)
+	// Starting at one, so we remove the "seeds:" header at the beginning
+	for i := 1; i < len(words); i += 2 {
+		// If there are at least two more words, convert them to integers and add them as an int array to the array
+		if i+1 < len(words) {
+			start, _ := strconv.Atoi(words[i])
+			end, _ := strconv.Atoi(words[i+1])
+			end += start - 1
+			seedRanges = append(seedRanges, []int{start, end})
 		}
 	}
 
-	// Return the array of integers
-	return seedNumbers
+	// Return the array of int arrays
+	return seedRanges
 }
 
 // Function for reading the conversion maps,
