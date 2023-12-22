@@ -131,8 +131,17 @@ func readInputFile() [][]int {
 	// Split each line into words
 	inputWords := [][]string{}
 	for _, line := range inputLines {
-		inputWords = append(inputWords, strings.Fields(line))
+		// If line is not blank
+		if len(line) != 0 {
+			// Remove everything before the first colon (including the colon) from the beginning of the line
+			line = strings.Split(line, ":")[1]
+			// Remove all spaces from the line
+			line = strings.Replace(line, " ", "", -1)
+			inputWords = append(inputWords, strings.Fields(line))
+		}
 	}
+
+	fmt.Printf("+++ inputWords: %v\n", inputWords)
 
 	// Convert the input words into ints
 	inputInts := [][]int{}
