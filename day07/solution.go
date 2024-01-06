@@ -165,7 +165,7 @@ func comparePositionCards(cards1 string, cards2 string) bool {
 	cardValues['A'] = 13
 	cardValues['K'] = 12
 	cardValues['Q'] = 11
-	cardValues['J'] = 10
+	cardValues['J'] = 0
 	cardValues['T'] = 9
 	cardValues['9'] = 8
 	cardValues['8'] = 7
@@ -229,6 +229,14 @@ func countMostFrequentChars(cards string) (int, int) {
 	maxCount := 0
 	nextMaxCount := 0
 	most := rune(' ')
+	nextMost := rune(' ')
+
+	// Special case:  If the hand is JJJJJ, convert all the Js to As
+	if strings.Count(cards, "J") == 5 {
+		cards = strings.Replace(cards, "J", "A", -1)
+	}
+
+	jokerCount := strings.Count(cards, "J")
 
 	for _, char := range chars {
 		count := strings.Count(cards, string(char))
@@ -243,8 +251,22 @@ func countMostFrequentChars(cards string) (int, int) {
 			count := strings.Count(cards, string(char))
 			if count > nextMaxCount {
 				nextMaxCount = count
+				nextMost = char
 			}
 		}
+	}
+
+	// Convert all the jokers to the most frequent character
+	// unless the most frequent character is "J", in which case
+	// convert all the jokers to the next most frequent character
+	// and recalculate the counts
+	if jokerCount > 0 {
+		if most == 'J' {
+			cards = strings.Replace(cards, "J", string(nextMost), -1)
+		} else {
+			cards = strings.Replace(cards, "J", string(most), -1)
+		}
+		maxCount, nextMaxCount = countMostFrequentChars(cards)
 	}
 
 	return maxCount, nextMaxCount
