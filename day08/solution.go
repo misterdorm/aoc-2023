@@ -25,6 +25,7 @@ import (
 	"fmt"
 	"os"
 	"regexp"
+	"strings"
 )
 
 // Node represents a node in the map
@@ -65,7 +66,6 @@ func main() {
 	fmt.Printf("Directions: %s\n", directions)
 
 	// Read the list of nodes from the input file, into a slice of strings.
-	// The first node is the starting node.
 	for {
 		line, err := reader.ReadString('\n')
 		if err != nil {
@@ -84,39 +84,64 @@ func main() {
 		nodeMap[nodeName] = Node{nodeName, leftNode, rightNode}
 	}
 
-	// Follow the directions, starting at the first node.
-	steps := 0
-	currentNode := "AAA"
-
-	for currentNode != "ZZZ" {
-		for _, direction := range directions {
-			// Get the Node struct for the current node.
-			node := nodeMap[currentNode]
-
-			fmt.Print(currentNode)
-
-			// If the direction is "R", then follow the right node.
-			if direction == 'R' {
-				currentNode = node.RightNode
-			} else {
-				// Otherwise, follow the left node.
-				currentNode = node.LeftNode
-			}
-
-			// Increment the number of steps taken.
-			steps++
-
-			fmt.Printf(" %s -> %s, %d\n", string(direction), currentNode, steps)
-
-			// If we have reached the "ZZZ" node, then we are done.
-			if currentNode == "ZZZ" {
-				break
-			}
+	// Find all starting nodes, those that end in "A"
+	currentNodes := make([]string, 0)
+	for _, node := range nodeMap {
+		if strings.HasSuffix(node.Name, "A") {
+			currentNodes = append(currentNodes, node.Name)
 		}
 	}
 
-	// Print the name of the node we ended up at.
-	fmt.Println(steps)
+	// Create a slice of ints to keep track of the number of steps taken for each starting node
+	stepCount := make([]int, len(currentNodes))
+	for i := range stepCount {
+		stepCount[i] = 0
+	}
+
+	fmt.Printf("Starting nodes: %v\n", currentNodes)
+
+	// Follow the directions, starting from all nodes that end in "A"
+	// until all paths reach an node ending in "Z"
+
+	// Iterate across all current nodes
+	for i := 0; i < len(currentNodes); i++ {
+
+		found := false
+		for !found {
+			for _, direction := range directions {
+
+				// Get the Node struct for the current node.
+				node := nodeMap[currentNodes[i]]
+
+				// fmt.Printf("%02d: %s", i, currentNodes[i])
+
+				// If the direction is "R", then follow the right node.
+				if direction == 'R' {
+					currentNodes[i] = node.RightNode
+				} else {
+					// Otherwise, follow the left node.
+					currentNodes[i] = node.LeftNode
+				}
+
+				// fmt.Printf(" %s -> %s, %d\n", string(direction), currentNodes[i], stepCount[i])
+
+				// Increment the number of steps taken.
+				stepCount[i]++
+
+				if strings.HasSuffix(currentNodes[i], "Z") {
+					found = true
+					break
+				}
+
+			}
+		}
+
+		fmt.Printf("Steps for path %d: %d\n", i, stepCount[i])
+	}
+
+	// Find the least common multiple of all the integers in stepCount
+	lcm := lcmOfSlice(stepCount)
+	fmt.Printf("Least common multiple: %d\n", lcm)
 }
 
 // parseNode parses a line from the input file, which contains a node name,
@@ -128,4 +153,23 @@ func parseNode(node string) (string, string, string) {
 		return "", "", ""
 	}
 	return matches[1], matches[2], matches[3]
+}
+
+func lcm(a, b int) int {
+	return a * b / gcd(a, b)
+}
+
+func gcd(a, b int) int {
+	if b == 0 {
+		return a
+	}
+	return gcd(b, a%b)
+}
+
+func lcmOfSlice(numbers []int) int {
+	result := numbers[0]
+	for _, number := range numbers[1:] {
+		result = lcm(result, number)
+	}
+	return result
 }
