@@ -37,11 +37,29 @@ func main() {
 		// Calculate the difference between each integer in the slice.
 		// recursively until all the differences are zero.
 
-		next += extrapolateNextValue(slice)
+		next += extrapolatePrevValue(slice)
 		fmt.Printf("\n")
 	}
 
 	fmt.Printf("sum of nexts: %v\n", next)
+
+}
+
+func extrapolatePrevValue(slice []int) int {
+
+	var next int
+
+	if sliceDifference(slice) == nil {
+		// return last integer in the slice
+		next = slice[0]
+	} else {
+		// calculate the previous integer in the slice
+
+		next = slice[0] - extrapolatePrevValue(sliceDifference(slice))
+	}
+
+	fmt.Printf("next: %v\n", next)
+	return next
 
 }
 
